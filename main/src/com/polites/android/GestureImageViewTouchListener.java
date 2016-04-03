@@ -267,93 +267,116 @@ public class GestureImageViewTouchListener implements OnTouchListener {
 		image.animationStop();
 	}
 	
-	@Override
-	public boolean onTouch(View v, MotionEvent event) {
+@Override
+public boolean onTouch(View v, MotionEvent event) {
 
-		if(!inZoom) {
-			
-			if(!tapDetector.onTouchEvent(event)) {
-				if(event.getPointerCount() == 1 && flingDetector.onTouchEvent(event)) {
-					startFling();
-				}
-				 
-				if(event.getAction() == MotionEvent.ACTION_UP) {
-					handleUp();
-				}
-				else if(event.getAction() == MotionEvent.ACTION_DOWN) {
-					stopAnimations();
-					
-					last.x = event.getX();
-					last.y = event.getY();
-					
-					if(imageListener != null) {
-						imageListener.onTouch(last.x, last.y);
-					}
-					
-					touched = true;
-				}
-				else if(event.getAction() == MotionEvent.ACTION_MOVE) {
-					if(event.getPointerCount() > 1) {
-						multiTouch = true;
-						if(initialDistance > 0) {
-							
-							pinchVector.set(event);
-							pinchVector.calculateLength();
-							
-							float distance = pinchVector.length;
-							
-							if(initialDistance != distance) {
-								
-								float newScale = (distance / initialDistance) * lastScale;
-								
-								if(newScale <= maxScale) {
-									scaleVector.length *= newScale;
-									
-									scaleVector.calculateEndPoint();
-									
-									scaleVector.length /= newScale;
-									
-									float newX = scaleVector.end.x;
-									float newY = scaleVector.end.y;
-									
-									handleScale(newScale, newX, newY);
-								}
-							}
-						}
-						else {
-							initialDistance = MathUtils.distance(event);
-							
-							MathUtils.midpoint(event, midpoint);
-							
-							scaleVector.setStart(midpoint);
-							scaleVector.setEnd(next);
-							
-							scaleVector.calculateLength();
-							scaleVector.calculateAngle();
-							
-							scaleVector.length /= lastScale;
-						}
-					}
-					else {
-						if(!touched) {
-							touched = true;
-							last.x = event.getX();
-							last.y = event.getY();
-							next.x = image.getImageX();
-							next.y = image.getImageY();
-						}
-						else if(!multiTouch) {
-							if(handleDrag(event.getX(), event.getY())) {
-								image.redraw();
-							}
-						}
-					}
-				}
-			}
-		}
-		
-		return true;
-	}
+    Log.i("", "-----onTouch-----" + inZoom);
+
+    if (!inZoom) {
+
+        if (!tapDetector.onTouchEvent(event)) {
+            if (event.getPointerCount() == 1 && flingDetector.onTouchEvent(event)) {
+                startFling();
+            }
+
+            if (event.getAction() == MotionEvent.ACTION_UP) {
+                handleUp();
+            } else if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                stopAnimations();
+
+                last.x = event.getX();
+                last.y = event.getY();
+
+                if (boundaryLeft != last.x) {
+                    v.getParent().requestDisallowInterceptTouchEvent(true);
+                }
+
+                if (imageListener != null) {
+                    imageListener.onTouch(last.x, last.y);
+                }
+
+                touched = true;
+            } else if (event.getAction() == MotionEvent.ACTION_MOVE) {
+                if (event.getPointerCount() > 1) {
+                    multiTouch = true;
+                    if (initialDistance > 0) {
+
+                        pinchVector.set(event);
+                        pinchVector.calculateLength();
+
+                        float distance = pinchVector.length;
+
+                        if (initialDistance != distance) {
+
+                            float newScale = (distance / initialDistance) * lastScale;
+
+                            if (newScale <= maxScale) {
+                                scaleVector.length *= newScale;
+
+                                scaleVector.calculateEndPoint();
+
+                                scaleVector.length /= newScale;
+
+                                float newX = scaleVector.end.x;
+                                float newY = scaleVector.end.y;
+
+                                handleScale(newScale, newX, newY);
+                            }
+                        }
+                    } else {
+                        initialDistance = MathUtils.distance(event);
+
+                        MathUtils.midpoint(event, midpoint);
+
+                        scaleVector.setStart(midpoint);
+                        scaleVector.setEnd(next);
+
+                        scaleVector.calculateLength();
+                        scaleVector.calculateAngle();
+
+                        scaleVector.length /= lastScale;
+                    }
+                } else {
+
+
+                    if (!touched) {
+                        touched = true;
+                        last.x = event.getX();
+                        last.y = event.getY();
+                        next.x = image.getImageX();
+                        next.y = image.getImageY();
+                    } else if (!multiTouch) {
+
+                        Log.i("", "x:" + next.x + " multiTouch:" + boundaryRight
+                                + "  " + boundaryLeft);
+                        if ((boundaryRight / 2) == next.x) { // nomal model
+                            v.getParent().requestDisallowInterceptTouchEvent(false);
+                        } else {
+                            if (next.x > 0 && boundaryRight > 0 && boundaryLeft > 0) {   //double model
+
+                                v.getParent().requestDisallowInterceptTouchEvent(  //disable parant event
+                                        false);
+                            } else if (next.x != boundaryLeft && next.x < 0) {    //right boundary  on srceen
+                                v.getParent()
+                                        .requestDisallowInterceptTouchEvent(true);
+                            } else if (next.x != boundaryRight && next.x > 0) {   //left boundary  on srceen
+                                v.getParent()
+                                        .requestDisallowInterceptTouchEvent(true);  
+                            } else {
+                                v.getParent().requestDisallowInterceptTouchEvent(
+                                        false);
+                            }
+
+                        }
+
+                        if (handleDrag(v, event.getX(), event.getY())) {
+                            image.redraw();
+                        }
+                    }
+                }
+            }
+        }
+    } 
 	
 	protected void handleUp() {
 		
